@@ -1,4 +1,4 @@
-# RestrictedContentDL — How to Run (Any Laptop)
+# RestrictedContentDL — How to Run
 
 This guide covers setup, daily use, and safe shutdown/cleanup.
 
@@ -21,7 +21,9 @@ git clone https://github.com/bisnuray/RestrictedContentDL
 cd RestrictedContentDL
 ```
 
-2) **Create or edit `config.env`**
+
+### 2.2 Create or edit `config.env`
+
 Open `config.env` and replace the placeholders:
 
 - `API_ID`
@@ -29,16 +31,39 @@ Open `config.env` and replace the placeholders:
 - `BOT_TOKEN`
 - `SESSION_STRING`
 
-Optional tuning (recommended to avoid FloodWait):
-```
+Recommended safe defaults to avoid FloodWait:
+
+```env
 MAX_CONCURRENT_DOWNLOADS=1
 BATCH_SIZE=1
 FLOOD_WAIT_DELAY=10
+````
+
+Optional auto-forward setting:
+
+```env
+FORWARD_CHAT_ID=
 ```
 
----
+To enable auto-forwarding, set `FORWARD_CHAT_ID` to a target channel/group chat ID or username.
 
-## 3) Start the bot
+Example:
+
+```env
+FORWARD_CHAT_ID=-1001234567890
+```
+
+Leave it empty to disable auto-forwarding.
+
+### 2.3 Auto-forward requirements
+
+If you enable `FORWARD_CHAT_ID`:
+
+* The bot must be added to that target channel/group
+* The bot must have permission to send messages/media there
+* If the target chat is invalid or the bot has no permission, the bot will warn you and still send the downloaded content to your private chat normally
+
+### 3) Start the bot
 
 ### Foreground (see logs in terminal)
 ```

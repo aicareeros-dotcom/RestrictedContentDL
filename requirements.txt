@@ -1,4 +1,4 @@
-Pyrofork==2.3.68
+kurigram
 TgCrypto
 Pyleaves
 python-dotenv

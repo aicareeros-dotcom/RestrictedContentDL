@@ -54,8 +54,8 @@ bot = Client(
 # Client for user session (✅ FIXED)
 user = Client(
     "user_session",
-    api_id=PyroConf.API_ID,              # ✅ ADDED
-    api_hash=PyroConf.API_HASH,          # ✅ ADDED
+    api_id=PyroConf.API_ID,
+    api_hash=PyroConf.API_HASH,
     session_string=PyroConf.SESSION_STRING,
     workers=100,
     max_concurrent_transmissions=1,
@@ -137,6 +137,16 @@ async def cleanup_storage(_, message: Message):
     except Exception as e:
         LOGGER(__name__).error(f"Cleanup failed: {e}")
         return await message.reply("❌ **Cleanup failed.** Check logs for details.")
+
+
+# ✅ ONLY FIX ADDED (missing function)
+async def initialize():
+    global download_semaphore, forward_chat_id
+    download_semaphore = asyncio.Semaphore(PyroConf.MAX_CONCURRENT_DOWNLOADS)
+
+    if PyroConf.FORWARD_CHAT_ID:
+        forward_chat_id = await resolve_forward_chat_id(PyroConf.FORWARD_CHAT_ID)
+        LOGGER(__name__).info(f"Auto-forward enabled. Target chat: {forward_chat_id}")
 
 
 # ======= (BAKI CODE SAME AS IT IS — KOI CHANGE NAHI) =======

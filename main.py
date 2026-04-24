@@ -1,4 +1,4 @@
-# ===== KEEP RENDER LIVE (ADDED ONLY THIS PART) =====
+# ===== KEEP RENDER LIVE (FINAL FIX) =====
 from flask import Flask
 import threading
 import os
@@ -13,8 +13,11 @@ def run_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# ✅ FIX (daemon=True)
-threading.Thread(target=run_web, daemon=True).start()
+def keep_alive():
+    t = threading.Thread(target=run_web)
+    t.start()
+
+keep_alive()
 # ===== END =====
 
 
@@ -144,7 +147,7 @@ async def cleanup_storage(_, message: Message):
         return await message.reply("❌ Cleanup failed.")
 
 
-# ✅ initialize function
+# initialize function
 async def initialize():
     global download_semaphore, forward_chat_id
     download_semaphore = asyncio.Semaphore(PyroConf.MAX_CONCURRENT_DOWNLOADS)
@@ -154,7 +157,7 @@ async def initialize():
         LOGGER(__name__).info(f"Auto-forward enabled: {forward_chat_id}")
 
 
-# ===== MAIN =====
+# MAIN
 if __name__ == "__main__":
     try:
         LOGGER(__name__).info("Bot Started!")

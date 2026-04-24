@@ -1,7 +1,8 @@
 pyrogram
 tgcrypto
-pyleaves
 python-dotenv
 psutil
 pillow
 flask
+aiohttp
+requests

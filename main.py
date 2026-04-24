@@ -1,3 +1,22 @@
+# ===== KEEP RENDER LIVE (ADDED ONLY THIS PART) =====
+from flask import Flask
+import threading
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is LIVE 🚀"
+
+def run_web():
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+threading.Thread(target=run_web).start()
+# ===== END =====
+
+
 # Copyright (C) @TheSmartBisnu
 # Channel: https://t.me/itsSmartDev
 
@@ -157,7 +176,6 @@ if __name__ == "__main__":
         LOGGER(__name__).info("Bot Started!")
         asyncio.get_event_loop().run_until_complete(initialize())
 
-        # ✅ SAFE START FIX
         try:
             user.start()
         except Exception as e:

@@ -1,4 +1,4 @@
-# ===== KEEP RENDER LIVE (FINAL FIX) =====
+# ===== RENDER LIVE FIX (WEB SERVER) =====
 from flask import Flask
 import threading
 import os
@@ -10,19 +10,18 @@ def home():
     return "Bot is LIVE 🚀"
 
 def run_web():
+    # Render default port 10000 use karta hai
     port = int(os.environ.get("PORT", 10000))
+    # Threading ke bina app.run block kar dega, isliye ise separate rakhna zaroori hai
     app.run(host="0.0.0.0", port=port)
 
+# Web server ko background mein chalane ke liye thread
 def keep_alive():
     t = threading.Thread(target=run_web)
+    t.setDaemon(True) # Ye main process ke saath exit ho jayega
     t.start()
 
-keep_alive()
-# ===== END =====
-
-
-# Copyright (C) @TheSmartBisnu
-# Channel: https://t.me/itsSmartDev
+# ========================================
 
 import shutil
 import psutil
@@ -157,23 +156,28 @@ async def initialize():
         LOGGER(__name__).info(f"Auto-forward enabled: {forward_chat_id}")
 
 
-# MAIN
+# MAIN - Optimized Start
 if __name__ == "__main__":
     try:
-        LOGGER(__name__).info("Bot Started!")
+        # Step 1: Start Web Server for Render
+        keep_alive()
+        LOGGER(__name__).info("Web server started for Render Health Check!")
 
+        # Step 2: Initialize Settings
         asyncio.get_event_loop().run_until_complete(initialize())
 
-        try:
-            user.start()
-        except Exception as e:
-            LOGGER(__name__).error(f"User session error: {e}")
-
+        # Step 3: Start Clients
+        user.start()
+        LOGGER(__name__).info("User session started!")
+        
+        # Step 4: Run Bot
+        LOGGER(__name__).info("Bot is now running...")
         bot.run()
 
     except KeyboardInterrupt:
         pass
     except Exception as err:
-        LOGGER(__name__).error(err)
+        LOGGER(__name__).error(f"Fatal Error: {err}")
     finally:
         LOGGER(__name__).info("Bot Stopped")
+        

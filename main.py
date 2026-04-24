@@ -1,6 +1,7 @@
 # ===== KEEP RENDER LIVE (ADDED ONLY THIS PART) =====
 from flask import Flask
 import threading
+import os
 
 app = Flask(__name__)
 
@@ -9,18 +10,17 @@ def home():
     return "Bot is LIVE 🚀"
 
 def run_web():
-    import os
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-threading.Thread(target=run_web).start()
+# ✅ FIX (daemon=True)
+threading.Thread(target=run_web, daemon=True).start()
 # ===== END =====
 
 
 # Copyright (C) @TheSmartBisnu
 # Channel: https://t.me/itsSmartDev
 
-import os
 import shutil
 import psutil
 import asyncio
@@ -70,7 +70,7 @@ bot = Client(
     sleep_threshold=30,
 )
 
-# Client for user session (✅ FIXED)
+# Client for user session
 user = Client(
     "user_session",
     api_id=PyroConf.API_ID,
@@ -117,24 +117,11 @@ async def help_command(_, message: Message):
     help_text = (
         "💡 **Media Downloader Bot Help**\n\n"
         "➤ **Download Media**\n"
-        "   – Send `/dl <post_URL>` **or** just paste a Telegram post link to fetch photos, videos, audio, or documents.\n\n"
+        "   – Send `/dl <post_URL>` **or** just paste a Telegram post link.\n\n"
         "➤ **Batch Download**\n"
-        "   – Send `/bdl start_link end_link` to grab a series of posts in one go.\n"
-        "     💡 Example: `/bdl https://t.me/mychannel/100 https://t.me/mychannel/120`\n"
-        "**It will download all posts from ID 100 to 120.**\n\n"
-        "➤ **Requirements**\n"
-        "   – Make sure the user client is part of the chat.\n\n"
-        "➤ **If the bot hangs**\n"
-        "   – Send `/killall` to cancel any pending downloads.\n\n"
-        "➤ **Logs**\n"
-        "   – Send `/logs` to download the bot’s logs file.\n\n"
-        "➤ **Cleanup**\n"
-        "   – Send `/cleanup` to remove temporary downloaded files from disk.\n\n"
-        "➤ **Stats**\n"
-        "   – Send `/stats` to view current status:\n\n"
-        "**Example**:\n"
-        "  • `/dl https://t.me/itsSmartDev/547`\n"
-        "  • `https://t.me/itsSmartDev/547`"
+        "   – Send `/bdl start_link end_link`\n\n"
+        "➤ **Cleanup** → `/cleanup`\n"
+        "➤ **Stats** → `/stats`\n"
     )
     
     markup = InlineKeyboardMarkup(
@@ -148,32 +135,30 @@ async def cleanup_storage(_, message: Message):
     try:
         files_removed, bytes_freed = cleanup_downloads_root()
         if files_removed == 0:
-            return await message.reply("🧹 **Cleanup complete:** no local downloads found.")
+            return await message.reply("🧹 Cleanup complete: no files found.")
         return await message.reply(
-            f"🧹 **Cleanup complete:** removed `{files_removed}` file(s), "
-            f"freed `{get_readable_file_size(bytes_freed)}`."
+            f"🧹 Removed `{files_removed}` files, freed `{get_readable_file_size(bytes_freed)}`."
         )
     except Exception as e:
         LOGGER(__name__).error(f"Cleanup failed: {e}")
-        return await message.reply("❌ **Cleanup failed.** Check logs for details.")
+        return await message.reply("❌ Cleanup failed.")
 
 
-# ✅ ONLY FIX ADDED (missing function)
+# ✅ initialize function
 async def initialize():
     global download_semaphore, forward_chat_id
     download_semaphore = asyncio.Semaphore(PyroConf.MAX_CONCURRENT_DOWNLOADS)
 
     if PyroConf.FORWARD_CHAT_ID:
         forward_chat_id = await resolve_forward_chat_id(PyroConf.FORWARD_CHAT_ID)
-        LOGGER(__name__).info(f"Auto-forward enabled. Target chat: {forward_chat_id}")
+        LOGGER(__name__).info(f"Auto-forward enabled: {forward_chat_id}")
 
 
-# ======= (BAKI CODE SAME AS IT IS — KOI CHANGE NAHI) =======
-
-
+# ===== MAIN =====
 if __name__ == "__main__":
     try:
         LOGGER(__name__).info("Bot Started!")
+
         asyncio.get_event_loop().run_until_complete(initialize())
 
         try:

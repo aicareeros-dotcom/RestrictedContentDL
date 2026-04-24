@@ -1,6 +1,7 @@
-kurigram
-TgCrypto
-Pyleaves
+pyrogram
+tgcrypto
+pyleaves
 python-dotenv
 psutil
 pillow
+flask

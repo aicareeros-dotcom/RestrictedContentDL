@@ -1,31 +1,27 @@
-# ===== RENDER LIVE FIX (WEB SERVER) =====
-from flask import Flask
-import threading
+# ===== RENDER LIVE & 24/7 CONFIG =====
 import os
+import threading
+import asyncio
+from flask import Flask
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is LIVE 🚀"
+    return "Bot is Status: 100% Online 🚀", 200
 
-def run_web():
-    # Render default port 10000 use karta hai
+def run_flask():
+    # Render hamesha port 10000 mangta hai
     port = int(os.environ.get("PORT", 10000))
-    # Threading ke bina app.run block kar dega, isliye ise separate rakhna zaroori hai
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
-# Web server ko background mein chalane ke liye thread
-def keep_alive():
-    t = threading.Thread(target=run_web)
-    t.setDaemon(True) # Ye main process ke saath exit ho jayega
-    t.start()
+# Flask ko background thread mein chalana zaroori hai
+threading.Thread(target=run_flask, daemon=True).start()
 
-# ========================================
+# =====================================
 
 import shutil
 import psutil
-import asyncio
 from time import time
 
 from pyleaves import Leaves
@@ -34,33 +30,18 @@ from pyrogram import Client, filters
 from pyrogram.errors import PeerIdInvalid, BadRequest, FloodWait
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-from helpers.utils import (
-    processMediaGroup,
-    progressArgs,
-    send_media
-)
-
+# Helpers aur Config (Aapki purani files se)
+from helpers.utils import processMediaGroup, progressArgs, send_media
 from helpers.forward import check_forward_permission, resolve_forward_chat_id
-
 from helpers.files import (
-    get_download_path,
-    fileSizeLimit,
-    get_readable_file_size,
-    get_readable_time,
-    cleanup_download,
-    cleanup_downloads_root
+    get_download_path, fileSizeLimit, get_readable_file_size, 
+    get_readable_time, cleanup_download, cleanup_downloads_root
 )
-
-from helpers.msg import (
-    getChatMsgID,
-    get_file_name,
-    get_raw_text
-)
-
+from helpers.msg import getChatMsgID, get_file_name, get_raw_text
 from config import PyroConf
 from logger import LOGGER
 
-# Initialize the bot client
+# --- Clients Setup ---
 bot = Client(
     "media_bot",
     api_id=PyroConf.API_ID,
@@ -72,7 +53,6 @@ bot = Client(
     sleep_threshold=30,
 )
 
-# Client for user session
 user = Client(
     "user_session",
     api_id=PyroConf.API_ID,
@@ -87,97 +67,78 @@ RUNNING_TASKS = set()
 download_semaphore = None
 forward_chat_id = None
 
-def track_task(coro):
-    task = asyncio.create_task(coro)
-    RUNNING_TASKS.add(task)
-    def _remove(_):
-        RUNNING_TASKS.discard(task)
-    task.add_done_callback(_remove)
-    return task
-
+# --- Handlers ---
 
 @bot.on_message(filters.command("start") & filters.private)
 async def start(_, message: Message):
     welcome_text = (
         "👋 **Welcome to Media Downloader Bot!**\n\n"
-        "I can grab photos, videos, audio, and documents from any Telegram post.\n"
-        "Just send me a link (paste it directly or use `/dl <link>`),\n"
-        "or reply to a message with `/dl`.\n\n"
-        "ℹ️ Use `/help` to view all commands and examples.\n"
-        "🔒 Make sure the user client is part of the chat.\n\n"
-        "Ready? Send me a Telegram post link!"
+        "I am running 24/7 on Render! 🚀\n"
+        "Send me a Telegram link to start."
     )
-
     markup = InlineKeyboardMarkup(
         [[InlineKeyboardButton("Update Channel", url="https://t.me/itsSmartDev")]]
     )
     await message.reply(welcome_text, reply_markup=markup, disable_web_page_preview=True)
 
-
 @bot.on_message(filters.command("help") & filters.private)
 async def help_command(_, message: Message):
     help_text = (
         "💡 **Media Downloader Bot Help**\n\n"
-        "➤ **Download Media**\n"
-        "   – Send `/dl <post_URL>` **or** just paste a Telegram post link.\n\n"
-        "➤ **Batch Download**\n"
-        "   – Send `/bdl start_link end_link`\n\n"
-        "➤ **Cleanup** → `/cleanup`\n"
-        "➤ **Stats** → `/stats`\n"
+        "➤ Send a link to download media.\n"
+        "➤ Use /cleanup to clear space.\n"
+        "➤ Use /stats to check server health."
     )
-    
-    markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("Update Channel", url="https://t.me/itsSmartDev")]]
-    )
-    await message.reply(help_text, reply_markup=markup, disable_web_page_preview=True)
-
+    await message.reply(help_text)
 
 @bot.on_message(filters.command("cleanup") & filters.private)
 async def cleanup_storage(_, message: Message):
     try:
         files_removed, bytes_freed = cleanup_downloads_root()
-        if files_removed == 0:
-            return await message.reply("🧹 Cleanup complete: no files found.")
-        return await message.reply(
-            f"🧹 Removed `{files_removed}` files, freed `{get_readable_file_size(bytes_freed)}`."
-        )
+        await message.reply(f"🧹 Freed `{get_readable_file_size(bytes_freed)}` from server.")
     except Exception as e:
-        LOGGER(__name__).error(f"Cleanup failed: {e}")
-        return await message.reply("❌ Cleanup failed.")
+        await message.reply("❌ Cleanup failed.")
 
+# --- Initialization & Main Loop ---
 
-# initialize function
 async def initialize():
     global download_semaphore, forward_chat_id
     download_semaphore = asyncio.Semaphore(PyroConf.MAX_CONCURRENT_DOWNLOADS)
-
     if PyroConf.FORWARD_CHAT_ID:
-        forward_chat_id = await resolve_forward_chat_id(PyroConf.FORWARD_CHAT_ID)
-        LOGGER(__name__).info(f"Auto-forward enabled: {forward_chat_id}")
+        try:
+            forward_chat_id = await resolve_forward_chat_id(PyroConf.FORWARD_CHAT_ID)
+            LOGGER(__name__).info(f"Forward ID set to: {forward_chat_id}")
+        except:
+            LOGGER(__name__).error("Failed to resolve Forward Chat ID")
 
+async def main():
+    LOGGER(__name__).info("Bot is starting...")
+    await initialize()
+    
+    # Start User Session
+    try:
+        await user.start()
+        LOGGER(__name__).info("✅ User session is live!")
+    except Exception as e:
+        LOGGER(__name__).error(f"❌ User session error: {e}")
 
-# MAIN - Optimized Start
+    # Start Bot
+    try:
+        await bot.start()
+        LOGGER(__name__).info("✅ Bot is online and ready!")
+    except Exception as e:
+        LOGGER(__name__).error(f"❌ Bot start error: {e}")
+        return
+
+    # Keep the bot running forever
+    await asyncio.Event().wait()
+
 if __name__ == "__main__":
     try:
-        # Step 1: Start Web Server for Render
-        keep_alive()
-        LOGGER(__name__).info("Web server started for Render Health Check!")
-
-        # Step 2: Initialize Settings
-        asyncio.get_event_loop().run_until_complete(initialize())
-
-        # Step 3: Start Clients
-        user.start()
-        LOGGER(__name__).info("User session started!")
-        
-        # Step 4: Run Bot
-        LOGGER(__name__).info("Bot is now running...")
-        bot.run()
-
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
     except KeyboardInterrupt:
-        pass
+        LOGGER(__name__).info("Stopping...")
     except Exception as err:
         LOGGER(__name__).error(f"Fatal Error: {err}")
-    finally:
-        LOGGER(__name__).info("Bot Stopped")
         
